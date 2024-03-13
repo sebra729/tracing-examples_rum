@@ -30,6 +30,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.splunk.android.workshopapp.databinding.FragmentSecondBinding;
+import com.splunk.rum.SplunkRum;
 
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -37,6 +38,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 
 public class SecondFragment extends Fragment {
 
@@ -89,12 +94,15 @@ public class SecondFragment extends Fragment {
         binding.buttonSpam.setOnClickListener(v -> toggleSpam());
 
         binding.buttonFreeze.setOnClickListener(v -> {
-            try {
+            Span span = SplunkRum.getInstance().startWorkflow("buttonFreeze");
+            try (Scope s = span.makeCurrent()) {
                 for (int i = 0; i < 20; i++) {
                     Thread.sleep(1_000);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } finally {
+                span.end();
             }
         });
         binding.buttonWork.setOnClickListener(v -> {

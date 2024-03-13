@@ -49,6 +49,12 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+import com.splunk.rum.SplunkRum;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.api.common.AttributeKey;
+
+
 public class FirstFragment extends Fragment {
 
     private final MutableLiveData<String> httpResponse = new MutableLiveData<>();
@@ -78,14 +84,36 @@ public class FirstFragment extends Fragment {
         });
 
         binding.loginButton.setOnClickListener(v -> {
-            //not really a login, but it does make an http call
-            makeCall("https://pmrum.o11ystore.com/");
+            Span loginSpan = SplunkRum.getInstance().startWorkflow("loginButton");
+            try (Scope s = loginSpan.makeCurrent()) {
+                //not really a login, but it does make an http call
+                makeCall("https://pmrum.o11ystore.com/");
+                SplunkRum.getInstance().setGlobalAttribute(AttributeKey.stringKey("user_id"), "me_user");
+            } finally {
+                loginSpan.end();
+            }
         });
         binding.httpErrorButton.setOnClickListener(v -> {
-            makeCall("https://asdlfkjasd.asdfkjasdf.ifi");
+            Span span = SplunkRum.getInstance().startWorkflow("httpErrorButton");
+            try (Scope s = span.makeCurrent()) {
+                //not really a login, but it does make an http call
+                makeCall("https://asdlfkjasd.asdfkjasdf.ifi");
+                makeCall("https://google.com");
+                SplunkRum.getInstance().setGlobalAttribute(AttributeKey.stringKey("user_id"), "me_user");
+            } finally {
+                span.end();
+            }
+
         });
         binding.httpNotFoundButton.setOnClickListener(v -> {
-            makeCall("https://pmrum.o11ystore.com/foobarbaz");
+            Span span = SplunkRum.getInstance().startWorkflow("httpNotFoundButton");
+            try (Scope s = span.makeCurrent()) {
+                //not really a login, but it does make an http call
+                makeCall("https://pmrum.o11ystore.com/foobarbaz");
+                SplunkRum.getInstance().setGlobalAttribute(AttributeKey.stringKey("user_id"), "me_user");
+            } finally {
+                span.end();
+            }
         });
     }
 
@@ -137,7 +165,8 @@ public class FirstFragment extends Fragment {
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
             e.printStackTrace();
         }
-        return builder.build();
+        //return builder.build();
+        return SplunkRum.getInstance().createRumOkHttpCallFactory(builder.build());
     }
 
     private static final TrustManager[] trustAllCerts = new TrustManager[]{
